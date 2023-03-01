@@ -139,7 +139,7 @@ proc create_root_design { parentCell } {
   # 1 port for iic
   # 1 port for control interfacec of mipoi csi rx
   set_property -dict [ list \
-    CONFIG.NUM_MI [expr 2 * $::mipi_channel_cnt ] \
+    CONFIG.NUM_MI [expr 2 * $::mipi_channel_cnt + 1 ] \
     CONFIG.NUM_SI {1} \
     ] $ps_axi_lpd
 
@@ -168,6 +168,9 @@ proc create_root_design { parentCell } {
   set xlslice_frmb_csi_rst_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice xlslice_frmb_csi_rst_0 ]
   set_property CONFIG.DIN_WIDTH {92} [get_bd_cells xlslice_csi_rst_0]
   set_property CONFIG.DIN_WIDTH {92} [get_bd_cells xlslice_frmb_csi_rst_0]
+
+  set iic_pmod [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:iic_rtl:1.0 iic_pmod ]
+  set axi_iic_pmod [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_iic:2.1 axi_iic_pmod ]
 
   set x 0
   set iic$x [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:iic_rtl:1.0 iic$x ]
@@ -358,11 +361,13 @@ proc create_root_design { parentCell } {
     [get_bd_pins zynq_ultra_ps_e_0/pl_clk0] \
     [get_bd_pins mipi_csi2rxss_0/lite_aclk] \
     [get_bd_pins rst_ps8_0_99M/slowest_sync_clk] \
-    [get_bd_pins ps_axi_lpd/M00_ACLK] \
     [get_bd_pins ps_axi_lpd/S00_ACLK] \
     [get_bd_pins ps_axi_lpd/ACLK] \
+    [get_bd_pins ps_axi_lpd/M00_ACLK] \
     [get_bd_pins ps_axi_lpd/M01_ACLK] \
+    [get_bd_pins ps_axi_lpd/M02_ACLK] \
     [get_bd_pins axi_iic_0/s_axi_aclk] \
+    [get_bd_pins axi_iic_pmod/s_axi_aclk] \
     [get_bd_pins zynq_ultra_ps_e_0/maxihpm0_lpd_aclk]
 
   connect_bd_net [get_bd_pins xlslice_csi_rst_0/Dout] [get_bd_pins mipi_csi2rxss_0/video_aresetn]
@@ -396,30 +401,37 @@ proc create_root_design { parentCell } {
 
   connect_bd_intf_net [get_bd_intf_ports iic0] [get_bd_intf_pins axi_iic_0/IIC]
   connect_bd_net [get_bd_pins axi_iic_0/iic2intc_irpt] [get_bd_pins xlconcat_irq_0/In0]
+
+  connect_bd_intf_net [get_bd_intf_ports iic_pmod] [get_bd_intf_pins axi_iic_pmod/IIC]
+  connect_bd_net [get_bd_pins axi_iic_pmod/iic2intc_irpt] [get_bd_pins xlconcat_irq_0/In3]
+
   connect_bd_net [get_bd_pins axi_ic_video/S00_ARESETN] [get_bd_pins rst_ps8_0_300M/peripheral_aresetn]
   connect_bd_net [get_bd_pins axi_ic_video/M00_ARESETN] [get_bd_pins rst_ps8_0_300M/peripheral_aresetn]
   connect_bd_net [get_bd_pins axi_ic_video/ARESETN] [get_bd_pins rst_ps8_0_300M/interconnect_aresetn]
 #  connect_bd_net [get_bd_pins ps_axi_fpd/M01_ARESETN] [get_bd_pins ps_axi_fpd/M00_ARESETN] -boundary_type upper
 #  connect_bd_net [get_bd_pins ps_axi_fpd/S00_ARESETN] [get_bd_pins ps_axi_fpd/M01_ARESETN] -boundary_type upper
+
   connect_bd_net [get_bd_pins ps_axi_fpd/S00_ARESETN] [get_bd_pins rst_ps8_0_300M/interconnect_aresetn]
   connect_bd_net [get_bd_pins ps_axi_fpd/ARESETN] [get_bd_pins rst_ps8_0_300M/interconnect_aresetn]
 
-  set_property -dict [list CONFIG.NUM_MI {2}] [get_bd_cells ps_axi_lpd]
+  
   set_property -dict [list CONFIG.S00_HAS_DATA_FIFO {1}] [get_bd_cells axi_ic_video]
 
 
   connect_bd_net [get_bd_pins zynq_ultra_ps_e_0/pl_resetn0] [get_bd_pins rst_ps8_0_99M/ext_reset_in]
   connect_bd_net [get_bd_pins rst_ps8_0_99M/peripheral_aresetn] [get_bd_pins axi_iic_0/s_axi_aresetn]
+  connect_bd_net [get_bd_pins rst_ps8_0_99M/peripheral_aresetn] [get_bd_pins axi_iic_pmod/s_axi_aresetn]
   connect_bd_net [get_bd_pins rst_ps8_0_99M/interconnect_aresetn] [get_bd_pins ps_axi_lpd/ARESETN]
   connect_bd_net [get_bd_pins ps_axi_lpd/S00_ARESETN] [get_bd_pins ps_axi_lpd/M00_ARESETN] -boundary_type upper
   connect_bd_net [get_bd_pins ps_axi_lpd/M00_ARESETN] [get_bd_pins rst_ps8_0_99M/peripheral_aresetn]
-
-
   connect_bd_net [get_bd_pins ps_axi_lpd/M01_ARESETN] [get_bd_pins rst_ps8_0_99M/peripheral_aresetn]
+  connect_bd_net [get_bd_pins ps_axi_lpd/M02_ARESETN] [get_bd_pins rst_ps8_0_99M/peripheral_aresetn]
+
   connect_bd_net [get_bd_pins rst_ps8_0_300M/ext_reset_in] [get_bd_pins zynq_ultra_ps_e_0/pl_resetn0]
 
   connect_bd_intf_net -boundary_type upper [get_bd_intf_pins ps_axi_lpd/M00_AXI] [get_bd_intf_pins axi_iic_0/S_AXI]
-  connect_bd_intf_net -boundary_type upper [get_bd_intf_pins ps_axi_lpd/M01_AXI] [get_bd_intf_pins mipi_csi2rxss_0/csirxss_s_axi]
+  connect_bd_intf_net -boundary_type upper [get_bd_intf_pins ps_axi_lpd/M01_AXI] [get_bd_intf_pins axi_iic_pmod/S_AXI]
+  connect_bd_intf_net -boundary_type upper [get_bd_intf_pins ps_axi_lpd/M02_AXI] [get_bd_intf_pins mipi_csi2rxss_0/csirxss_s_axi]
   connect_bd_net [get_bd_pins mipi_csi2rxss_0/lite_aresetn] [get_bd_pins rst_ps8_0_99M/peripheral_aresetn]
   connect_bd_intf_net -boundary_type upper [get_bd_intf_pins ps_axi_fpd/M00_AXI] [get_bd_intf_pins v_frmbuf_wr_csi_0/s_axi_CTRL]
 

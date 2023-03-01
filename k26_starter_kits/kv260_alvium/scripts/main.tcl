@@ -13,6 +13,7 @@ set board kv260_som
 set device k26
 set rev None
 set output {xsa}
+#set xdc_list {xdc/default.xdc }
 set xdc_list {xdc/default.xdc xdc/iic_pmod.xdc }
 set ip_repo_path {}
 set src_repo_path {}
@@ -133,5 +134,5 @@ wait_on_run impl_1
 write_hw_platform -fixed -force -include_bit  -file $proj_dir/${proj_name}.xsa
 validate_hw_platform -verbose $proj_dir/${proj_name}.xsa
 
-exit
+#exit
 
